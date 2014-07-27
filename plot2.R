@@ -1,7 +1,7 @@
-## plot1.R
+## plot2.R
 
 ## Make a plot showing the total PM2.5 emission from all sources for
-## each of the years 1999, 2002, 2005, and 2008
+## Baltimore City in each of the years 1999, 2002, 2005, and 2008
 
 ## fetch zip file from URL (if required)
 
@@ -32,26 +32,13 @@ if (!exists("SCC")) {
 
 ## generate summary of total Emissions by year
 
+NEI_24510 <- NEI[NEI$fips == 24510,]
+
 library(plyr)
-totalEmissionsByYear <- ddply(NEI, c("year"), summarise, total.Emissions=sum(Emissions),
-                              number.Readings=length(Emissions) )
+totalEmissionsByYear_24510 <- ddply(NEI_24510, c("year"), summarise, total.Emissions=sum(Emissions),
+                              number.Readings=length(Emissions))
 
-with(totalEmissionsByYear, {
-    plot(year,total.Emissions)
-    lines(year,total.Emissions)
-})
+with(totalEmissionsByYear_24510, plot(year,total.Emissions))
+model <- lm(total.Emissions ~ year, totalEmissionsByYear_24510)
+abline(model, lwd=2)
 
-## stuff for box plot, remove zero values as I suspect they are simply missing
-
-byYear <- split(NEI,NEI$year)
-nonZero1999 <- byYear[[1]]$Emissions > 0.0
-nonZero2002 <- byYear[[2]]$Emissions > 0.0
-nonZero2005 <- byYear[[3]]$Emissions > 0.0
-nonZero2008 <- byYear[[4]]$Emissions > 0.0
-
-par(pch = 0)
-boxplot(byYear[[1]]$Emissions[nonZero1999],
-        byYear[[2]]$Emissions[nonZero2002],
-        byYear[[3]]$Emissions[nonZero2005],
-        byYear[[4]]$Emissions[nonZero2008], 
-        range = 0)
