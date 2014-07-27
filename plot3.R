@@ -55,7 +55,7 @@ p <- p + geom_smooth(method="lm",formula=y~x)
 print(p)
 
 ## Create plot directly on png device
-png("plot3.png", width = 1.5*480)
+png("plot3.png", width = 2*480)
     p <- qplot(year,total.Emissions,data=df_plot3,facets = .~type,
                xlab="Year", ylab="Total Emissions (tons)")
     p <- p + geom_smooth(method="lm",formula=y~x)
