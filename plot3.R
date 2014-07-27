@@ -17,11 +17,14 @@ if (!file.exists(localFilename)) {
 
 dataFileList <- unzip(localFilename,list = TRUE)
 
+## unzip the file to the ./data directory (if required)
+
 if (!file.exists("data")) {  
     unzip(localFilename, overwrite=FALSE, exdir="data")
 }
 
-## Read two files
+## Read the two data files if they are not already in the R
+## environment (saves time to check first)
 
 if (!exists("NEI")) {
     NEI <- readRDS("./data/summarySCC_PM25.rds")
@@ -30,22 +33,31 @@ if (!exists("SCC")) {
     SCC <- readRDS("./data/Source_Classification_Code.rds")
 }
 
-## generate summary of total Emissions by year
+## peel out data related to ZIP code 24510
 
 NEI_24510 <- NEI[NEI$fips == 24510,]
+
+## Generate summary by year and type. Uses plyr package
 
 library(plyr)
 df_plot3 <- ddply(NEI_24510, c("year","type"), summarise, total.Emissions=sum(Emissions),
                               number.Readings=length(Emissions))
 
 df_plot3$type <- factor(df_plot3$type, levels=unique(df_plot3$type))
+years <- unique(NEI_24510$year)
+
+## Create plot (in ggplot2 system)
 
 require(ggplot2)
-p <- qplot(year,total.Emissions,data=df_plot3,facets = .~type)
-p <- p + geom_line()
+p <- qplot(year,total.Emissions,data=df_plot3,facets = .~type,
+           xlab="Year", ylab="Total Emissions (tons)")
+p <- p + geom_smooth(method="lm",formula=y~x)
 print(p)
 
-# q <- qplot(year,Emissions,data=NEI_24510,facets = .~type,
-#                geom = c("boxplot") )
-# print(p+q)
-
+## Create plot directly on png device
+png("plot3.png", width = 1.5*480)
+    p <- qplot(year,total.Emissions,data=df_plot3,facets = .~type,
+               xlab="Year", ylab="Total Emissions (tons)")
+    p <- p + geom_smooth(method="lm",formula=y~x)
+    print(p)
+dev.off()
