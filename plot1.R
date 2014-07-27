@@ -17,11 +17,14 @@ if (!file.exists(localFilename)) {
 
 dataFileList <- unzip(localFilename,list = TRUE)
 
+## unzip the file to the ./data directory (if required)
+
 if (!file.exists("data")) {  
     unzip(localFilename, overwrite=FALSE, exdir="data")
 }
 
-## Read two files
+## Read the two data files if they are not already in the R
+## environments (saves time to check first)
 
 if (!exists("NEI")) {
     NEI <- readRDS("./data/summarySCC_PM25.rds")
@@ -30,18 +33,15 @@ if (!exists("SCC")) {
     SCC <- readRDS("./data/Source_Classification_Code.rds")
 }
 
-## generate summary of total Emissions by year
+## Generate summary of total Emissions by year. Uses plyr package
 
 library(plyr)
-totalEmissionsByYear <- ddply(NEI, c("year"), summarise, total.Emissions=sum(Emissions),
+totalEmissionsByYear <- ddply(NEI, c("year"), summarise,
+                              total.Emissions=sum(Emissions),
                               number.Readings=length(Emissions) )
+years <- unique(NEI$year)
 
-with(totalEmissionsByYear, {
-    plot(year,total.Emissions)
-    lines(year,total.Emissions)
-})
-
-## stuff for box plot, remove zero values as I suspect they are simply missing
+## stuff for box plot
 
 byYear <- split(NEI,NEI$year)
 nonZero1999 <- byYear[[1]]$Emissions > 0.0
@@ -49,9 +49,73 @@ nonZero2002 <- byYear[[2]]$Emissions > 0.0
 nonZero2005 <- byYear[[3]]$Emissions > 0.0
 nonZero2008 <- byYear[[4]]$Emissions > 0.0
 
+## Multiple plots
+par(mfrow = c(1,3))
+par(ann=FALSE)
+
+## Plot1 with linear model
+with(totalEmissionsByYear, plot(year,total.Emissions, xaxt="n"))
+axis(1,at=years,labels=years)
+model1 <- lm(total.Emissions ~ year, totalEmissionsByYear)
+abline(model1, lwd=2)
+title("Total Emissions over Time",
+      ylab = "Total Emissions (tons)",
+      xlab = "Year")
+
+## Plot2 bar plot of number readings
+with(totalEmissionsByYear, barplot(number.Readings, xaxt="n"))
+axis(1,at=1:4,labels=years)
+title("Amount Data over Time",
+      ylab = "Number of Readings",
+      xlab = "Year")
+
+## Plot3 boxplot of log transformed data
+## (without taking the log of data, the
+## quantiles of the dataset are illegible)
+
 par(pch = 0)
-boxplot(byYear[[1]]$Emissions[nonZero1999],
-        byYear[[2]]$Emissions[nonZero2002],
-        byYear[[3]]$Emissions[nonZero2005],
-        byYear[[4]]$Emissions[nonZero2008], 
-        range = 0)
+boxplot(log(byYear[[1]]$Emissions[nonZero1999]),
+        log(byYear[[2]]$Emissions[nonZero2002]),
+        log(byYear[[3]]$Emissions[nonZero2005]),
+        log(byYear[[4]]$Emissions[nonZero2008]), 
+        range = 0, xaxt="n")
+axis(1,at=1:4,labels=years)
+title("Boxplot of Log Transformed Nonzero Emissions",
+      ylab = "log(Emissions > 0.0)",
+      xlab = "Year")
+
+## create plot directly on png device
+
+png("plot1.png", width=480*2)
+    par(mfrow = c(1,3))
+    par(ann=FALSE)
+
+    ## Plot1
+    with(totalEmissionsByYear, plot(year,total.Emissions, xaxt="n"))
+    axis(1,at=years,labels=years)
+    model1 <- lm(total.Emissions ~ year, totalEmissionsByYear)
+    abline(model1, lwd=2)
+    title("Total Emissions over Time",
+          ylab = "Total Emissions (tons)",
+          xlab = "Year")
+
+    ## Plot2
+    with(totalEmissionsByYear, barplot(number.Readings, xaxt="n"))
+    axis(1,at=1:4,labels=years)
+    title("Amount Data over Time",
+          ylab = "Number of Readings",
+          xlab = "Year")
+
+    ## Plot3
+    par(pch = 0)
+    boxplot(log(byYear[[1]]$Emissions[nonZero1999]),
+            log(byYear[[2]]$Emissions[nonZero2002]),
+            log(byYear[[3]]$Emissions[nonZero2005]),
+            log(byYear[[4]]$Emissions[nonZero2008]), 
+            range = 0, xaxt="n")
+    axis(1,at=1:4,labels=years)
+    title("Boxplot of Log Transformed Nonzero Emissions",
+    ylab = "log(Emissions > 0.0)",
+    xlab = "Year")
+dev.off()
+
